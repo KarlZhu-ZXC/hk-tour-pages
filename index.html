@@ -1,0 +1,1678 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>香港三天两夜旅行罗盘</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      --ink: #f7f1df;
+      --muted: rgba(247, 241, 223, .68);
+      --quiet: rgba(247, 241, 223, .46);
+      --ground: #071015;
+      --panel: rgba(9, 21, 27, .76);
+      --panel-strong: rgba(12, 29, 37, .92);
+      --line: rgba(247, 241, 223, .16);
+      --harbour: #24c6b6;
+      --mtr: #e73843;
+      --tram: #f3c95c;
+      --peak: #78aee8;
+      --leaf: #7ab37b;
+      --paper: #fbf4dc;
+      --radius: 18px;
+      --sharp: 2px;
+      --shadow: 0 26px 80px rgba(0, 0, 0, .38);
+      --speed: 1;
+      --day-accent: var(--harbour);
+      --day-route: linear-gradient(90deg, var(--mtr), var(--harbour), var(--tram));
+      color-scheme: dark;
+      font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+    }
+
+    [data-theme="day"] {
+      --ink: #17130d;
+      --muted: rgba(23, 19, 13, .72);
+      --quiet: rgba(23, 19, 13, .45);
+      --ground: #efe3ca;
+      --panel: rgba(255, 250, 236, .74);
+      --panel-strong: rgba(255, 250, 236, .94);
+      --line: rgba(23, 19, 13, .16);
+      --shadow: 0 24px 70px rgba(68, 47, 23, .16);
+      color-scheme: light;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 18% 16%, color-mix(in oklch, var(--day-accent), transparent 70%), transparent 34vw),
+        radial-gradient(circle at 78% 6%, rgba(243, 201, 92, .2), transparent 28vw),
+        linear-gradient(180deg, color-mix(in oklch, var(--ground), #183642 18%), var(--ground) 56%, #030608);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -3;
+      background-image:
+        linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,.9), transparent 82%);
+      pointer-events: none;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      opacity: .22;
+      pointer-events: none;
+      background:
+        repeating-linear-gradient(0deg, transparent 0 2px, rgba(255,255,255,.18) 3px, transparent 4px),
+        radial-gradient(circle at 50% 20%, transparent, rgba(0,0,0,.54));
+      mix-blend-mode: overlay;
+      animation: scan calc(7s * var(--speed)) linear infinite;
+    }
+
+    a { color: inherit; }
+
+    button, input, select {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    .page {
+      width: min(1440px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 26px 0 80px;
+    }
+
+    .nav {
+      position: sticky;
+      top: 14px;
+      z-index: 50;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 12px;
+      align-items: center;
+      min-height: 58px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: color-mix(in oklch, var(--panel-strong), transparent 8%);
+      backdrop-filter: blur(20px) saturate(1.2);
+      box-shadow: 0 14px 36px rgba(0,0,0,.22);
+    }
+
+    .mark {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      color: #071015;
+      font-weight: 900;
+      letter-spacing: -1px;
+      background: var(--day-route);
+      box-shadow: 0 0 0 6px rgba(255,255,255,.05), 0 0 34px color-mix(in oklch, var(--day-accent), transparent 30%);
+    }
+
+    .nav-title {
+      min-width: 0;
+      font-family: "Songti SC", "STSong", "Noto Serif CJK SC", serif;
+      font-size: clamp(18px, 2.2vw, 27px);
+      line-height: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .chip,
+    .icon-btn {
+      min-height: 42px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,.05);
+      transition: transform .22s ease, background .22s ease, border-color .22s ease;
+    }
+
+    .chip:hover,
+    .icon-btn:hover {
+      transform: translateY(-1px);
+      border-color: color-mix(in oklch, var(--day-accent), white 20%);
+      background: color-mix(in oklch, var(--day-accent), transparent 84%);
+    }
+
+    .hero {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1.06fr) minmax(360px, .94fr);
+      gap: clamp(20px, 4vw, 56px);
+      min-height: calc(100vh - 110px);
+      align-items: center;
+      padding: 56px 0 92px;
+    }
+
+    .hero-copy {
+      position: relative;
+      z-index: 2;
+      padding-left: clamp(0px, 2vw, 24px);
+    }
+
+    .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 20px;
+      color: var(--muted);
+      font-family: "SF Mono", "Menlo", "Consolas", monospace;
+      font-size: 12px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .kicker::before {
+      content: "";
+      width: 42px;
+      height: 2px;
+      background: var(--day-route);
+      box-shadow: 0 0 20px var(--day-accent);
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 980px;
+      font-family: "Songti SC", "STSong", "Noto Serif CJK SC", serif;
+      font-size: clamp(42px, 5.6vw, 82px);
+      line-height: .94;
+      letter-spacing: 0;
+      text-wrap: balance;
+      white-space: nowrap;
+    }
+
+    .hero-copy > p {
+      max-width: 650px;
+      margin: 26px 0 0;
+      color: var(--muted);
+      font-size: clamp(17px, 1.7vw, 22px);
+      text-wrap: pretty;
+    }
+
+    .hero-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 28px;
+    }
+
+    .ticket {
+      display: grid;
+      gap: 3px;
+      min-width: 170px;
+      padding: 12px 14px;
+      border: 1px dashed color-mix(in oklch, var(--day-accent), white 12%);
+      border-radius: 12px;
+      background: color-mix(in oklch, var(--panel-strong), transparent 18%);
+    }
+
+    .ticket b {
+      font-size: 12px;
+      color: var(--quiet);
+      font-family: "SF Mono", "Menlo", "Consolas", monospace;
+      text-transform: uppercase;
+    }
+
+    .ticket span { font-weight: 700; }
+
+    .compass-stage {
+      position: relative;
+      min-height: 680px;
+      display: grid;
+      place-items: center;
+      perspective: 1200px;
+    }
+
+    .harbour-card {
+      position: absolute;
+      inset: auto 0 0 auto;
+      width: min(64%, 380px);
+      aspect-ratio: 4 / 5;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      transform: rotate(2deg) translateY(12px);
+    }
+
+    .harbour-card img,
+    .mini-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      filter: saturate(1.04) contrast(1.04);
+    }
+
+    .harbour-card::after {
+      content: "VICTORIA HARBOUR";
+      position: absolute;
+      left: 14px;
+      bottom: 12px;
+      padding: 7px 10px;
+      color: var(--paper);
+      font-size: 11px;
+      letter-spacing: .16em;
+      background: rgba(0,0,0,.48);
+      border: 1px solid rgba(255,255,255,.18);
+    }
+
+    .compass {
+      position: relative;
+      z-index: 2;
+      width: min(88vw, 560px);
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background:
+        conic-gradient(from var(--needle, 0deg), rgba(36,198,182,.22), rgba(231,56,67,.18), rgba(243,201,92,.2), rgba(36,198,182,.22)),
+        radial-gradient(circle at center, rgba(255,255,255,.08), transparent 36%),
+        rgba(0,0,0,.12);
+      border: 1px solid color-mix(in oklch, var(--day-accent), white 20%);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.08),
+        inset 0 0 76px rgba(255,255,255,.04),
+        0 0 76px color-mix(in oklch, var(--day-accent), transparent 66%);
+    }
+
+    .compass::before,
+    .compass::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .compass::before {
+      inset: 46px;
+      border: 1px dashed rgba(255,255,255,.26);
+      animation: spin calc(34s * var(--speed)) linear infinite;
+    }
+
+    .compass::after {
+      inset: 96px;
+      border: 1px solid rgba(255,255,255,.12);
+    }
+
+    .needle {
+      position: absolute;
+      width: 5px;
+      height: 42%;
+      top: 8%;
+      transform-origin: 50% 100%;
+      transform: rotate(var(--needle, 0deg));
+      border-radius: 999px 999px 4px 4px;
+      background: linear-gradient(var(--day-accent), transparent);
+      box-shadow: 0 0 26px var(--day-accent);
+      transition: transform .75s cubic-bezier(.16, 1, .3, 1);
+    }
+
+    .compass-core {
+      position: relative;
+      z-index: 3;
+      display: grid;
+      place-items: center;
+      width: 42%;
+      aspect-ratio: 1;
+      padding: 22px;
+      border-radius: 50%;
+      text-align: center;
+      background: color-mix(in oklch, var(--panel-strong), black 12%);
+      border: 1px solid rgba(255,255,255,.2);
+      box-shadow: 0 14px 44px rgba(0,0,0,.32);
+    }
+
+    .compass-core strong {
+      font-family: "Songti SC", "STSong", serif;
+      font-size: clamp(28px, 4vw, 54px);
+      line-height: 1;
+    }
+
+    .compass-core span {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .day-btn {
+      position: absolute;
+      z-index: 4;
+      width: 116px;
+      min-height: 74px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: color-mix(in oklch, var(--panel-strong), transparent 8%);
+      backdrop-filter: blur(16px);
+      box-shadow: 0 12px 34px rgba(0,0,0,.18);
+      text-align: left;
+      transition: transform .24s ease, border-color .24s ease, background .24s ease;
+    }
+
+    .day-btn:hover,
+    .day-btn[aria-pressed="true"] {
+      transform: translateY(-5px) scale(1.02);
+      border-color: var(--day-accent);
+      background: color-mix(in oklch, var(--day-accent), var(--panel-strong) 72%);
+    }
+
+    .day-btn b {
+      display: block;
+      font-family: "SF Mono", "Menlo", "Consolas", monospace;
+      font-size: 11px;
+      color: var(--quiet);
+    }
+
+    .day-btn span {
+      display: block;
+      margin-top: 3px;
+      font-weight: 800;
+    }
+
+    .day-btn[data-day="0"] { top: 7%; left: 50%; transform: translateX(-50%); }
+    .day-btn[data-day="1"] { right: -4%; top: 46%; }
+    .day-btn[data-day="2"] { left: -4%; top: 46%; }
+    .day-btn[data-day="0"]:hover,
+    .day-btn[data-day="0"][aria-pressed="true"] { transform: translateX(-50%) translateY(-5px) scale(1.02); }
+
+    .panel-grid {
+      display: grid;
+      grid-template-columns: minmax(320px, .8fr) minmax(0, 1.2fr);
+      gap: 18px;
+      align-items: start;
+      margin-top: 22px;
+    }
+
+    .glass {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      backdrop-filter: blur(22px) saturate(1.15);
+      box-shadow: 0 20px 66px rgba(0,0,0,.2);
+    }
+
+    .day-summary {
+      position: sticky;
+      top: 92px;
+      overflow: hidden;
+    }
+
+    .summary-photo {
+      height: 240px;
+      overflow: hidden;
+      background: #111;
+    }
+
+    .summary-photo img {
+      width: 100%;
+      height: 118%;
+      object-fit: cover;
+      display: block;
+      transform: translateY(var(--photo-shift, -6px));
+      transition: transform .6s ease, filter .6s ease;
+    }
+
+    .summary-body {
+      padding: 22px;
+    }
+
+    .summary-body h2 {
+      margin: 0;
+      font-family: "Songti SC", "STSong", serif;
+      font-size: clamp(32px, 4vw, 52px);
+      line-height: .94;
+      text-wrap: balance;
+    }
+
+    .summary-body p {
+      margin: 14px 0 0;
+      color: var(--muted);
+      text-wrap: pretty;
+    }
+
+    .route-line {
+      position: relative;
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,.04);
+      overflow: hidden;
+    }
+
+    .route-line::before {
+      content: "";
+      position: absolute;
+      left: 20px;
+      top: 24px;
+      bottom: 24px;
+      width: 3px;
+      border-radius: 999px;
+      background: var(--day-route);
+      box-shadow: 0 0 24px var(--day-accent);
+    }
+
+    .station {
+      position: relative;
+      display: grid;
+      grid-template-columns: 22px 1fr;
+      gap: 10px;
+      align-items: center;
+      min-height: 30px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .station::before {
+      content: "";
+      position: relative;
+      z-index: 1;
+      width: 15px;
+      height: 15px;
+      margin-left: 0;
+      border-radius: 50%;
+      background: var(--ground);
+      border: 3px solid var(--day-accent);
+      box-shadow: 0 0 18px var(--day-accent);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .stat {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255,255,255,.04);
+    }
+
+    .stat b {
+      display: block;
+      font-family: "SF Mono", "Menlo", "Consolas", monospace;
+      font-size: 12px;
+      color: var(--quiet);
+    }
+
+    .stat span {
+      display: block;
+      margin-top: 4px;
+      font-size: 20px;
+      font-weight: 900;
+    }
+
+    .timeline {
+      padding: 12px;
+    }
+
+    .time-card {
+      display: grid;
+      grid-template-columns: 132px minmax(0, 1fr) 176px;
+      gap: 18px;
+      align-items: center;
+      padding: 14px;
+      border-bottom: 1px solid var(--line);
+      border-radius: 14px;
+      opacity: 0;
+      transform: translateY(12px);
+      animation: rise .58s cubic-bezier(.16,1,.3,1) forwards;
+      animation-delay: calc(var(--i) * 54ms * var(--speed));
+      transition: background .22s ease, transform .22s ease;
+    }
+
+    .time-card:last-child { border-bottom: 0; }
+
+    .time-card:hover {
+      background: color-mix(in oklch, var(--day-accent), transparent 88%);
+      transform: translateY(-2px);
+    }
+
+    .time {
+      font-family: "SF Mono", "Menlo", "Consolas", monospace;
+      font-weight: 900;
+      color: var(--day-accent);
+      white-space: nowrap;
+    }
+
+    .activity h3 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: 0;
+    }
+
+    .activity p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      text-wrap: pretty;
+    }
+
+    .meta {
+      display: grid;
+      gap: 6px;
+      color: var(--quiet);
+      font-size: 13px;
+    }
+
+    .meta span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,.04);
+    }
+
+    .gallery {
+      margin-top: 36px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-family: "Songti SC", "STSong", serif;
+      font-size: clamp(34px, 5vw, 72px);
+      line-height: .92;
+    }
+
+    .section-head p {
+      margin: 0;
+      max-width: 520px;
+      color: var(--muted);
+    }
+
+    .photo-grid {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr .8fr;
+      grid-auto-rows: 230px;
+      gap: 12px;
+    }
+
+    .mini-photo {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #111;
+      transform: translateZ(0);
+    }
+
+    .mini-photo:first-child { grid-row: span 2; }
+
+    .mini-photo::after {
+      content: attr(data-label);
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      max-width: calc(100% - 24px);
+      padding: 8px 10px;
+      color: var(--paper);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .04em;
+      background: rgba(0,0,0,.48);
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 999px;
+      backdrop-filter: blur(10px);
+    }
+
+    .mini-photo img {
+      transition: transform .8s cubic-bezier(.16,1,.3,1), filter .8s ease;
+    }
+
+    .mini-photo:hover img {
+      transform: scale(1.08);
+      filter: saturate(1.14) contrast(1.08);
+    }
+
+    .toolbelt {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 36px;
+    }
+
+    .tool {
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+    }
+
+    .tool h3 {
+      margin: 0;
+      font-family: "Songti SC", "STSong", serif;
+      font-size: 27px;
+    }
+
+    .tool ul {
+      margin: 12px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+    }
+
+    .tool li { margin: 7px 0; }
+
+    .ticker {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 40;
+      display: flex;
+      overflow: hidden;
+      border-top: 1px solid var(--line);
+      background: color-mix(in oklch, var(--panel-strong), black 8%);
+      backdrop-filter: blur(18px);
+    }
+
+    .ticker-track {
+      display: flex;
+      gap: 38px;
+      min-width: max-content;
+      padding: 10px 0;
+      font-family: "SF Mono", "Menlo", "Consolas", monospace;
+      font-size: 12px;
+      letter-spacing: .08em;
+      color: var(--muted);
+      animation: marquee calc(28s * var(--speed)) linear infinite;
+    }
+
+    .ticker span {
+      white-space: nowrap;
+    }
+
+    .tweaks-toggle {
+      position: fixed;
+      right: 18px;
+      bottom: 58px;
+      z-index: 80;
+      min-width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: var(--day-accent);
+      color: #061015;
+      font-weight: 950;
+      box-shadow: 0 16px 48px color-mix(in oklch, var(--day-accent), transparent 45%);
+    }
+
+    .tweaks {
+      position: fixed;
+      right: 18px;
+      bottom: 120px;
+      z-index: 90;
+      width: min(330px, calc(100vw - 36px));
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--panel-strong);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(24px);
+      transform: translateY(12px) scale(.97);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease, transform .2s ease;
+    }
+
+    .tweaks.open {
+      opacity: 1;
+      pointer-events: auto;
+      transform: none;
+    }
+
+    .tweaks h2 {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+
+    .control {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .control label {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,.04);
+    }
+
+    .segmented button {
+      min-height: 36px;
+      border-radius: 999px;
+      background: transparent;
+    }
+
+    .segmented button.active {
+      background: var(--day-accent);
+      color: #071015;
+      font-weight: 900;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--day-accent);
+    }
+
+    @keyframes rise {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes floaty {
+      0%, 100% { transform: translateY(0) rotateX(0deg); }
+      50% { transform: translateY(-10px) rotateX(2deg); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes scan {
+      to { background-position: 0 32px, 0 0; }
+    }
+
+    @keyframes marquee {
+      to { transform: translateX(-50%); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: .001ms !important;
+      }
+    }
+
+    @media (max-width: 1040px) {
+      .hero,
+      .panel-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .compass-stage {
+        min-height: 620px;
+      }
+
+      .day-summary {
+        position: relative;
+        top: 0;
+      }
+
+      .time-card {
+        grid-template-columns: 120px 1fr;
+      }
+
+      .meta {
+        grid-column: 2;
+        grid-template-columns: repeat(2, minmax(0, max-content));
+      }
+
+      .toolbelt {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        width: min(100% - 20px, 620px);
+        padding-top: 10px;
+      }
+
+      .nav {
+        grid-template-columns: auto 1fr;
+        border-radius: 20px;
+      }
+
+      .nav-actions {
+        grid-column: 1 / -1;
+        justify-content: space-between;
+      }
+
+      .chip {
+        flex: 1;
+        min-width: 0;
+        padding: 0 10px;
+        font-size: 13px;
+      }
+
+      .hero {
+        min-height: auto;
+        padding-top: 36px;
+        padding-bottom: 82px;
+      }
+
+      h1 {
+        font-size: clamp(38px, 11.8vw, 56px);
+        line-height: .96;
+        white-space: normal;
+      }
+
+      .compass-stage {
+        min-height: 500px;
+      }
+
+      .harbour-card {
+        width: 58%;
+        right: 2%;
+      }
+
+      .day-btn {
+        width: 96px;
+        min-height: 64px;
+        font-size: 13px;
+      }
+
+      .day-btn[data-day="1"] { right: -2%; }
+      .day-btn[data-day="2"] { left: -2%; }
+
+      .stats,
+      .photo-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .photo-grid {
+        grid-auto-rows: 230px;
+      }
+
+      .mini-photo:first-child {
+        grid-row: span 1;
+      }
+
+      .section-head {
+        display: grid;
+      }
+
+      .time-card {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .meta {
+        grid-column: auto;
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media print {
+      .nav, .tweaks, .tweaks-toggle, .ticker {
+        display: none;
+      }
+
+      body {
+        background: #fff;
+        color: #111;
+      }
+
+      .glass, .tool, .mini-photo, .ticket {
+        box-shadow: none;
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body data-theme="night">
+  <main class="page">
+    <nav class="nav" aria-label="页面导航">
+      <div class="mark">HK</div>
+      <div class="nav-title">香港三天两夜旅行罗盘</div>
+      <div class="nav-actions">
+        <button class="chip" data-jump="overview">路线</button>
+        <button class="chip" data-jump="gallery">照片</button>
+        <button class="chip" onclick="window.print()">导出 PDF</button>
+      </div>
+    </nav>
+
+    <section class="hero" id="overview">
+      <div class="hero-copy">
+        <p class="kicker">CX345 · CX312 · Mong Kok Base</p>
+        <h1>跟着香港的光走。</h1>
+        <p>把航班、旺角酒店、三天路线、交通转场和实景照片压进一个可点击的旅行罗盘。以后先改 travel-plan.md，再渲染成网页。</p>
+        <div class="hero-strip">
+          <div class="ticket"><b>Outbound</b><span>CX345 · 07:30-11:15</span></div>
+          <div class="ticket"><b>Return</b><span>CX312 · 17:00-20:30</span></div>
+          <div class="ticket"><b>Hotel</b><span>香港旺角智选假日酒店</span></div>
+        </div>
+      </div>
+
+      <div class="compass-stage" aria-label="三天旅行罗盘">
+        <div class="harbour-card"><img src="assets/victoria-harbour.jpg" alt="维多利亚港夜景"></div>
+        <div class="compass" id="compass">
+          <div class="needle" aria-hidden="true"></div>
+          <button class="day-btn" data-day="0" aria-pressed="true"><b>DAY 01</b><span>九龙夜色</span></button>
+          <button class="day-btn" data-day="1" aria-pressed="false"><b>DAY 02</b><span>港岛山海</span></button>
+          <button class="day-btn" data-day="2" aria-pressed="false"><b>DAY 03</b><span>西九返程</span></button>
+          <div class="compass-core">
+            <strong id="coreDay">D1</strong>
+            <span id="coreText">Tsim Sha Tsui → Central</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel-grid" aria-label="当前日程详情">
+      <aside class="day-summary glass">
+        <div class="summary-photo"><img id="summaryImage" src="assets/avenue-stars.jpg" alt="当前路线照片"></div>
+        <div class="summary-body">
+          <h2 id="summaryTitle">Day 1 · 九龙夜色</h2>
+          <p id="summaryIntro">落地后以酒店为锚点，先吃午餐，再用尖沙咀、星光大道、维港灯光秀和天星小轮完成第一次香港入场。</p>
+          <div class="route-line" id="routeLine"></div>
+          <div class="stats">
+            <div class="stat"><b>START</b><span id="statStart">11:15</span></div>
+            <div class="stat"><b>PACE</b><span id="statPace">轻松</span></div>
+            <div class="stat"><b>FOCUS</b><span id="statFocus">夜景</span></div>
+          </div>
+        </div>
+      </aside>
+
+      <section class="timeline glass" id="timeline" aria-live="polite"></section>
+    </section>
+
+    <section class="gallery" id="gallery">
+      <div class="section-head">
+        <h2>景点照片</h2>
+        <p>照片跟随当前 Day 切换。它们不是装饰，而是你出门前判断“这站值不值得停”的视觉索引。</p>
+      </div>
+      <div class="photo-grid" id="photoGrid"></div>
+    </section>
+
+    <section class="toolbelt" aria-label="旅行工具">
+      <article class="tool">
+        <h3>交通策略</h3>
+        <ul>
+          <li>Day1 机场到酒店优先机场快线到九龙站再打车，行李最省心。</li>
+          <li>Day2 山顶缆车排队过长时，直接切换 15 路巴士上山。</li>
+          <li>Day3 返程打车到九龙站，机场快线到 HKG T1，别压缩安检时间。</li>
+        </ul>
+      </article>
+      <article class="tool">
+        <h3>关键校正</h3>
+        <ul>
+          <li>香港机场国泰为 T1，不是 T3E。</li>
+          <li>2026 年 6 月 29 日是周一，M+ 闭馆，主线改香港故宫。</li>
+          <li>西九龙站是高铁站，机场快线在九龙站。</li>
+        </ul>
+      </article>
+      <article class="tool">
+        <h3>随身清单</h3>
+        <ul>
+          <li>港澳通行证、有效签注、机票和酒店确认。</li>
+          <li>支付宝香港乘车码 / 八达通，少量港币现金。</li>
+          <li>伞、防晒、充电宝、舒适鞋，夏天一定补水。</li>
+        </ul>
+      </article>
+    </section>
+  </main>
+
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker-track">
+      <span>YAU MA TEI → TSIM SHA TSUI → AVENUE OF STARS → STAR FERRY</span>
+      <span>CENTRAL → TAI KWUN → THE PEAK → KENNEDY TOWN</span>
+      <span>WEST KOWLOON → HONG KONG PALACE MUSEUM → KOWLOON STATION → HKG T1</span>
+      <span>YAU MA TEI → TSIM SHA TSUI → AVENUE OF STARS → STAR FERRY</span>
+      <span>CENTRAL → TAI KWUN → THE PEAK → KENNEDY TOWN</span>
+      <span>WEST KOWLOON → HONG KONG PALACE MUSEUM → KOWLOON STATION → HKG T1</span>
+    </div>
+  </div>
+
+  <button class="tweaks-toggle" id="tweaksToggle" aria-label="打开 Tweaks">T</button>
+  <aside class="tweaks" id="tweaks" aria-label="Tweaks 面板">
+    <h2>Tweaks</h2>
+    <div class="control">
+      <label>显示模式</label>
+      <div class="segmented">
+        <button id="nightBtn" class="active">夜色</button>
+        <button id="dayBtn">日间</button>
+      </div>
+    </div>
+    <div class="control">
+      <label for="motionRange">动画速度</label>
+      <input id="motionRange" type="range" min="0.55" max="1.8" value="1" step="0.05">
+    </div>
+    <div class="control">
+      <label>当前路线</label>
+      <div class="segmented">
+        <button data-pick="0" class="active">D1</button>
+        <button data-pick="1">D2</button>
+      </div>
+      <div class="segmented">
+        <button data-pick="2">D3</button>
+        <button id="compactBtn">紧凑</button>
+      </div>
+    </div>
+  </aside>
+
+  <script>
+    const trips = [
+          {
+                "accent": "#24c6b6",
+                "routeGradient": "linear-gradient(90deg, #e73843, #24c6b6, #f3c95c)",
+                "needle": "0deg",
+                "core": "D1",
+                "coreText": "TST → Central",
+                "title": "Day 1 · 九龙夜色",
+                "intro": "落地后以酒店为锚点，先吃午餐，再用尖沙咀、星光大道、维港灯光秀和天星小轮完成第一次香港入场。",
+                "image": "assets/avenue-stars.jpg",
+                "imageAlt": "星光大道",
+                "start": "11:15",
+                "pace": "轻松",
+                "focus": "夜景",
+                "route": [
+                      "HKG T1",
+                      "旺角酒店",
+                      "油麻地午餐",
+                      "K11 MUSEA",
+                      "星光大道",
+                      "维港灯光秀",
+                      "天星小轮"
+                ],
+                "photos": [
+                      [
+                            "assets/avenue-stars.jpg",
+                            "星光大道 · 维港栏杆位"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-35-6904bd27000000000401306a.webp",
+                            "小红书实拍 · 落地第一顿茶餐厅"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-36-65bb883000000000020200ad.webp",
+                            "小红书实拍 · 港式茶餐厅"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-38-67aec0b5000000002903fcb6.webp",
+                            "小红书实拍 · K11 MUSEA 外景"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-39-652a67200000000020002357.webp",
+                            "小红书实拍 · 尖沙咀街景"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-40-66438815000000001e01941c.webp",
+                            "小红书实拍 · K11 / 海港城片区"
+                      ],
+                      [
+                            "assets/k11-musea.jpg",
+                            "K11 MUSEA · 室内装置"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-41-68e140520000000007035e4f.webp",
+                            "小红书实拍 · 维港夜景栏杆位"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-42-67b7de70000000000d0148c2.webp",
+                            "小红书实拍 · 星光大道夜色"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-06-66cc7ab9000000001d01b394.webp",
+                            "小红书实拍 · 维港天际线"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-16-67b08bdb000000002901c43d.webp",
+                            "小红书实拍 · 尖沙咀晚餐"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-28-66b6cd560000000025031183.webp",
+                            "小红书实拍 · 灯光秀候场"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-29-686f9578000000001203e382.webp",
+                            "小红书实拍 · 幻彩咏香江"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-30-67513ea5000000000202a76c.webp",
+                            "小红书实拍 · 维港夜拍"
+                      ],
+                      [
+                            "assets/victoria-harbour.jpg",
+                            "维多利亚港 · 20:00 灯光秀"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-31-62e3ba560000000011012111.webp",
+                            "小红书实拍 · 灯光秀视角"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-32-656ddc850000000006028e7d.webp",
+                            "小红书实拍 · 夜景机位"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-33-62c97c60000000001002ac74.webp",
+                            "小红书实拍 · 维港灯光"
+                      ],
+                      [
+                            "assets/star-ferry.jpg",
+                            "天星小轮 · 夜航过海"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-43-641cf4af00000000130011ec.webp",
+                            "小红书实拍 · 天星小轮码头"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-44-66cb177f000000001f01f2fd.webp",
+                            "小红书实拍 · 渡轮视角"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-45-6648444000000000150109ab.webp",
+                            "小红书实拍 · 天星小轮船舱"
+                      ],
+                      [
+                            "assets/mong-kok.jpg",
+                            "旺角 · 回酒店后的夜宵半径"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-37-68b6c043000000001d01fe88.webp",
+                            "小红书实拍 · 港式点心拼桌"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-01-太平山顶.webp",
+                            "小红书推荐图 · 山顶夜景预览"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-04-维多利亚港.webp",
+                            "小红书推荐图 · 维港海面灯光"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-05-星光大道.webp",
+                            "小红书推荐图 · 星光大道机位"
+                      ]
+                ],
+                "timeline": [
+                      [
+                            "11:15-12:20",
+                            "抵达香港机场",
+                            "办理入境、取行李。国泰在 HKG 使用 T1，到达后看航显和指示牌。",
+                            "机场",
+                            "行李"
+                      ],
+                      [
+                            "12:20-13:10",
+                            "到酒店寄存行李",
+                            "优先机场快线到九龙站再打车去旺角酒店，带行李更稳。",
+                            "机场快线",
+                            "酒店"
+                      ],
+                      [
+                            "13:10-14:00",
+                            "第一顿午餐",
+                            "酒店附近茶餐厅解决，点菠萝油、干炒牛河、奶茶或烧味饭。",
+                            "油麻地",
+                            "午餐"
+                      ],
+                      [
+                            "14:00-16:10",
+                            "K11 MUSEA + 海港城",
+                            "油麻地站到尖沙咀站，逛 K11、海港城，热的时候用商场作空调缓冲。",
+                            "荃湾线",
+                            "拍照"
+                      ],
+                      [
+                            "16:10-18:00",
+                            "星光大道 + 维港海滨",
+                            "拍李小龙铜像、明星手印、文化中心海旁和钟楼方向。",
+                            "步行",
+                            "海景"
+                      ],
+                      [
+                            "18:00-19:20",
+                            "尖沙咀晚餐",
+                            "华嫂冰室或商场内快餐厅，不要把晚餐拖到 19:40 后。",
+                            "尖沙咀",
+                            "晚餐"
+                      ],
+                      [
+                            "19:20-20:10",
+                            "幻彩咏香江",
+                            "尖沙咀文化中心海旁或星光大道占位，官方 20:00 开始。",
+                            "最佳机位",
+                            "夜景"
+                      ],
+                      [
+                            "20:10-21:20",
+                            "天星小轮夜航",
+                            "尖沙咀码头到中环码头，坐上层靠窗看两岸灯光。",
+                            "渡轮",
+                            "体验"
+                      ],
+                      [
+                            "21:20-22:00",
+                            "回酒店 / 庙街夜宵",
+                            "从中环或尖沙咀回油麻地/旺角，体力好可顺路吃宵夜。",
+                            "地铁",
+                            "收尾"
+                      ]
+                ]
+          },
+          {
+                "accent": "#78aee8",
+                "routeGradient": "linear-gradient(90deg, #78aee8, #7ab37b, #f3c95c)",
+                "needle": "125deg",
+                "core": "D2",
+                "coreText": "Central → Peak",
+                "title": "Day 2 · 港岛山海",
+                "intro": "这天步行和坡道最多，从中环电影感街景到大馆，再上山顶，最后把日落留给坚尼地城。",
+                "image": "assets/peak-tram.jpg",
+                "imageAlt": "山顶缆车",
+                "start": "08:30",
+                "pace": "强度高",
+                "focus": "山海",
+                "route": [
+                      "旺角酒店",
+                      "中环",
+                      "半山扶梯",
+                      "大馆",
+                      "太平山顶",
+                      "坚尼地城",
+                      "铜锣湾"
+                ],
+                "photos": [
+                      [
+                            "assets/peak-tram.jpg",
+                            "山顶缆车 · 经典上山"
+                      ],
+                      [
+                            "assets/mid-levels-escalator.jpg",
+                            "半山扶梯 · 中环电影感"
+                      ],
+                      [
+                            "assets/tai-kwun.jpg",
+                            "大馆 · 历史建筑"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-23-68693cd90000000023006112.webp",
+                            "小红书实拍 · 大馆白色立面"
+                      ],
+                      [
+                            "assets/kennedy-town.jpg",
+                            "坚尼地城 · 海边日落"
+                      ],
+                      [
+                            "assets/victoria-harbour.jpg",
+                            "山顶视角 · 俯瞰维港"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-46-67e9531e000000001c035fac.webp",
+                            "小红书实拍 · 太平山顶观景"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-07-6641aee9000000001e03af81.webp",
+                            "小红书实拍 · 中环街景"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-08-67ced769000000002900ce8e.webp",
+                            "小红书实拍 · 半山扶梯"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-09-6730ca81000000001a037ae7.webp",
+                            "小红书实拍 · 中环坡道"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-20-677a860d000000000800eb7e.webp",
+                            "小红书实拍 · 坚尼地城海边"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-21-65cbbb500000000007027229.webp",
+                            "小红书实拍 · 坚尼地城路牌"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-22-69764753000000000a02807a.webp",
+                            "小红书实拍 · 海边日落机位"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-24-65a5f8930000000013036d56.webp",
+                            "小红书实拍 · 铜锣湾购物区"
+                      ]
+                ],
+                "timeline": [
+                      [
+                            "08:30-09:00",
+                            "酒店附近早餐",
+                            "茶餐厅即可，控制 30 分钟内，给港岛路线留体力。",
+                            "旺角",
+                            "早餐"
+                      ],
+                      [
+                            "09:00-09:35",
+                            "酒店 → 中环",
+                            "油麻地站坐荃湾线到中环，出站步行到半山扶梯起点。",
+                            "荃湾线",
+                            "转场"
+                      ],
+                      [
+                            "09:35-11:05",
+                            "半山扶梯 + 嘉咸街",
+                            "扶梯、坡道、壁画和街市都适合拍复古港风。",
+                            "中环",
+                            "拍照"
+                      ],
+                      [
+                            "11:05-12:30",
+                            "大馆 Tai Kwun",
+                            "旧警署、监狱建筑和庭院，室内展厅也适合避暑。",
+                            "荷李活道",
+                            "文化"
+                      ],
+                      [
+                            "12:30-13:40",
+                            "中环午餐",
+                            "中环街市、兰芳园、九记牛腩或附近茶餐厅，排队长就换。",
+                            "中环",
+                            "午餐"
+                      ],
+                      [
+                            "13:40-14:20",
+                            "前往山顶",
+                            "优先山顶缆车；如果排队过长，改 15 路巴士上山。",
+                            "缆车",
+                            "上山"
+                      ],
+                      [
+                            "14:20-16:25",
+                            "太平山顶",
+                            "凌霄阁、山顶广场、卢吉道观景位，视体力选择是否走卢吉道。",
+                            "山顶",
+                            "观景"
+                      ],
+                      [
+                            "16:25-18:40",
+                            "坚尼地城日落",
+                            "下山后港岛线到坚尼地城，海边路牌和足球场旁机位适合傍晚。",
+                            "港岛线",
+                            "日落"
+                      ],
+                      [
+                            "18:40-21:50",
+                            "铜锣湾晚餐购物后回酒店",
+                            "时代广场、SOGO、Donki；太累就打车回旺角。",
+                            "港岛线",
+                            "购物"
+                      ]
+                ]
+          },
+          {
+                "accent": "#f3c95c",
+                "routeGradient": "linear-gradient(90deg, #f3c95c, #e73843, #24c6b6)",
+                "needle": "245deg",
+                "core": "D3",
+                "coreText": "WestK → HKG",
+                "title": "Day 3 · 西九返程",
+                "intro": "2026 年 6 月 29 日是周一，M+ 闭馆，所以用香港故宫和西九龙海滨作文化主线，下午稳稳去机场。",
+                "image": "assets/palace-museum.jpg",
+                "imageAlt": "香港故宫文化博物馆",
+                "start": "08:30",
+                "pace": "保守",
+                "focus": "返程",
+                "route": [
+                      "旺角退房",
+                      "香港故宫",
+                      "西九龙海滨",
+                      "旺角补货",
+                      "九龙站",
+                      "机场快线",
+                      "HKG T1"
+                ],
+                "photos": [
+                      [
+                            "assets/palace-museum.jpg",
+                            "香港故宫 · 周一开放主线"
+                      ],
+                      [
+                            "assets/mplus.jpg",
+                            "M+ · 周一只看外观"
+                      ],
+                      [
+                            "assets/victoria-harbour.jpg",
+                            "西九龙海滨 · 港岛天际线"
+                      ],
+                      [
+                            "assets/mong-kok.jpg",
+                            "旺角 · 手信补货"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-47-67794e56000000000900d277.webp",
+                            "小红书实拍 · 机场返程补货"
+                      ],
+                      [
+                            "assets/star-ferry.jpg",
+                            "返程节奏 · 预留缓冲"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-25-684015060000000021009312.webp",
+                            "小红书实拍 · 西九龙文化区"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-26-67f22480000000001202d834.webp",
+                            "小红书实拍 · M+ 外观与海滨"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-27-6713bf330000000024019c75.webp",
+                            "小红书实拍 · 西九龙草坪"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-48-6791b3bb000000001800c71c.webp",
+                            "小红书实拍 · 返程备选商场"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-49-67b7e0e6000000000b017412.webp",
+                            "小红书实拍 · 室内备选景点"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-50-6857a9a800000000120338cd.webp",
+                            "小红书实拍 · 太空馆/科学馆备选"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-51-664078b4000000001e01dfd7.webp",
+                            "小红书实拍 · 亲子备选室内馆"
+                      ]
+                ],
+                "timeline": [
+                      [
+                            "08:30-09:30",
+                            "早餐 + 退房",
+                            "行李寄存在前台，随身包放证件、机票材料、充电宝。",
+                            "酒店",
+                            "退房"
+                      ],
+                      [
+                            "09:30-10:00",
+                            "酒店 → 西九龙文化区",
+                            "推荐打车 10-15 分钟到香港故宫 / 西九，地铁换乘不如打车省心。",
+                            "打车",
+                            "转场"
+                      ],
+                      [
+                            "10:00-12:15",
+                            "香港故宫文化博物馆",
+                            "周一通常 10:00-18:00 开放；M+ 周一闭馆，只看外观或海滨。",
+                            "西九龙",
+                            "文化"
+                      ],
+                      [
+                            "12:15-13:05",
+                            "西九龙午餐",
+                            "圆方、西九龙或尖沙咀方向吃饭，不排长队。",
+                            "午餐",
+                            "快节奏"
+                      ],
+                      [
+                            "13:05-13:45",
+                            "回酒店取行李 + 最后补货",
+                            "旺角/油麻地附近买曲奇、药妆、便利店零食，过 13:45 直接走。",
+                            "旺角",
+                            "手信"
+                      ],
+                      [
+                            "13:45-14:35",
+                            "前往香港机场",
+                            "酒店打车到九龙站，机场快线约 22 分钟到 HKG。",
+                            "机场快线",
+                            "推荐"
+                      ],
+                      [
+                            "14:35-17:00",
+                            "HKG T1 候机",
+                            "国泰 T1 A/B/C 区值机，柜台通常起飞前 60 分钟关闭。",
+                            "HKG T1",
+                            "登机"
+                      ]
+                ]
+          }
+    ];
+
+    const root = document.documentElement;
+    const compass = document.querySelector("#compass");
+    const coreDay = document.querySelector("#coreDay");
+    const coreText = document.querySelector("#coreText");
+    const summaryImage = document.querySelector("#summaryImage");
+    const summaryTitle = document.querySelector("#summaryTitle");
+    const summaryIntro = document.querySelector("#summaryIntro");
+    const routeLine = document.querySelector("#routeLine");
+    const timeline = document.querySelector("#timeline");
+    const photoGrid = document.querySelector("#photoGrid");
+    const statStart = document.querySelector("#statStart");
+    const statPace = document.querySelector("#statPace");
+    const statFocus = document.querySelector("#statFocus");
+    const dayButtons = [...document.querySelectorAll(".day-btn")];
+    const tweakPickButtons = [...document.querySelectorAll("[data-pick]")];
+    const jumpButtons = [...document.querySelectorAll("[data-jump]")];
+    let activeDay = 0;
+    let compact = false;
+
+    function setDay(index) {
+      activeDay = Number(index);
+      const trip = trips[activeDay];
+      root.style.setProperty("--day-accent", trip.accent);
+      root.style.setProperty("--day-route", trip.routeGradient);
+      root.style.setProperty("--needle", trip.needle);
+      compass.style.setProperty("--needle", trip.needle);
+      coreDay.textContent = trip.core;
+      coreText.textContent = trip.coreText;
+      summaryImage.src = trip.image;
+      summaryImage.alt = trip.imageAlt;
+      summaryTitle.textContent = trip.title;
+      summaryIntro.textContent = trip.intro;
+      statStart.textContent = trip.start;
+      statPace.textContent = trip.pace;
+      statFocus.textContent = trip.focus;
+      routeLine.innerHTML = trip.route.map(station => `<div class="station"><span>${station}</span></div>`).join("");
+      timeline.innerHTML = trip.timeline.map((item, i) => `
+        <article class="time-card" style="--i:${i}">
+          <div class="time">${item[0]}</div>
+          <div class="activity">
+            <h3>${item[1]}</h3>
+            <p>${item[2]}</p>
+          </div>
+          <div class="meta"><span>${item[3]}</span><span>${item[4]}</span></div>
+        </article>
+      `).join("");
+      photoGrid.innerHTML = trip.photos.map(photo => `
+        <figure class="mini-photo" data-label="${photo[1]}">
+          <img src="${photo[0]}" alt="${photo[1]}">
+        </figure>
+      `).join("");
+      dayButtons.forEach(button => {
+        button.setAttribute("aria-pressed", String(Number(button.dataset.day) === activeDay));
+      });
+      tweakPickButtons.forEach(button => button.classList.toggle("active", Number(button.dataset.pick) === activeDay));
+    }
+
+    dayButtons.forEach(button => button.addEventListener("click", () => setDay(button.dataset.day)));
+    tweakPickButtons.forEach(button => button.addEventListener("click", () => setDay(button.dataset.pick)));
+
+    jumpButtons.forEach(button => {
+      button.addEventListener("click", () => {
+        const target = document.getElementById(button.dataset.jump);
+        if (!target) return;
+        window.scrollTo({ top: target.offsetTop - 82, behavior: "smooth" });
+      });
+    });
+
+    document.addEventListener("pointermove", event => {
+      const x = (event.clientX / window.innerWidth - .5) * 14;
+      const y = (event.clientY / window.innerHeight - .5) * 14;
+      document.querySelector(".compass-stage").style.transform = `rotateY(${x}deg) rotateX(${-y}deg)`;
+      summaryImage.style.setProperty("--photo-shift", `${-6 + y * .45}px`);
+    });
+
+    const tweaks = document.querySelector("#tweaks");
+    document.querySelector("#tweaksToggle").addEventListener("click", () => tweaks.classList.toggle("open"));
+
+    const nightBtn = document.querySelector("#nightBtn");
+    const dayBtn = document.querySelector("#dayBtn");
+    nightBtn.addEventListener("click", () => {
+      document.body.dataset.theme = "night";
+      nightBtn.classList.add("active");
+      dayBtn.classList.remove("active");
+    });
+    dayBtn.addEventListener("click", () => {
+      document.body.dataset.theme = "day";
+      dayBtn.classList.add("active");
+      nightBtn.classList.remove("active");
+    });
+
+    document.querySelector("#motionRange").addEventListener("input", event => {
+      root.style.setProperty("--speed", event.target.value);
+    });
+
+    document.querySelector("#compactBtn").addEventListener("click", event => {
+      compact = !compact;
+      event.currentTarget.classList.toggle("active", compact);
+      document.querySelectorAll(".time-card .activity p").forEach(p => p.style.display = compact ? "none" : "");
+    });
+
+    setDay(0);
+  </script>
+</body>
+</html>
