@@ -546,7 +546,7 @@
       display: grid;
       grid-template-columns: 132px minmax(0, 1fr) 176px;
       gap: 18px;
-      align-items: center;
+      align-items: start;
       padding: 14px;
       border-bottom: 1px solid var(--line);
       border-radius: 14px;
@@ -554,14 +554,20 @@
       transform: translateY(12px);
       animation: rise .58s cubic-bezier(.16,1,.3,1) forwards;
       animation-delay: calc(var(--i) * 54ms * var(--speed));
-      transition: background .22s ease, transform .22s ease;
+      transition: background .22s ease, transform .22s ease, border-color .22s ease;
+      cursor: pointer;
     }
 
     .time-card:last-child { border-bottom: 0; }
 
-    .time-card:hover {
+    .time-card:hover,
+    .time-card.open {
       background: color-mix(in oklch, var(--day-accent), transparent 88%);
       transform: translateY(-2px);
+    }
+
+    .time-card.open {
+      border-color: color-mix(in oklch, var(--day-accent), white 18%);
     }
 
     .time {
@@ -583,6 +589,36 @@
       text-wrap: pretty;
     }
 
+    .activity-toggle {
+      margin-top: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 30px;
+      padding: 4px 10px;
+      border: 1px solid color-mix(in oklch, var(--day-accent), transparent 42%);
+      border-radius: 999px;
+      color: var(--paper);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .04em;
+      background: rgba(255,255,255,.05);
+    }
+
+    .activity-toggle::after {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-right: 2px solid currentColor;
+      border-bottom: 2px solid currentColor;
+      transform: rotate(45deg) translateY(-2px);
+      transition: transform .24s ease;
+    }
+
+    .time-card.open .activity-toggle::after {
+      transform: rotate(225deg) translate(-1px, -1px);
+    }
+
     .meta {
       display: grid;
       gap: 6px;
@@ -598,6 +634,60 @@
       border: 1px solid var(--line);
       border-radius: 999px;
       background: rgba(255,255,255,.04);
+    }
+
+    .time-photos {
+      grid-column: 2 / 4;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transform: translateY(-6px);
+      transition: max-height .48s cubic-bezier(.16,1,.3,1), opacity .24s ease, transform .32s ease, margin-top .32s ease;
+      margin-top: 0;
+    }
+
+    .time-card.open .time-photos {
+      max-height: 520px;
+      opacity: 1;
+      transform: translateY(0);
+      margin-top: 2px;
+    }
+
+    .time-photo {
+      position: relative;
+      overflow: hidden;
+      min-height: 138px;
+      aspect-ratio: 4 / 3;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255,255,255,.04);
+    }
+
+    .time-photo img {
+      transition: transform .8s cubic-bezier(.16,1,.3,1), filter .8s ease;
+    }
+
+    .time-photo:hover img {
+      transform: scale(1.07);
+      filter: saturate(1.12) contrast(1.06);
+    }
+
+    .time-photo figcaption {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      bottom: 8px;
+      padding: 7px 8px;
+      color: var(--paper);
+      font-size: 11px;
+      font-weight: 800;
+      background: rgba(0,0,0,.48);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 10px;
+      backdrop-filter: blur(10px);
     }
 
     .gallery {
@@ -861,6 +951,11 @@
         grid-template-columns: repeat(2, minmax(0, max-content));
       }
 
+      .time-photos {
+        grid-column: 1 / -1;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
       .toolbelt {
         grid-template-columns: 1fr;
       }
@@ -932,6 +1027,24 @@
         grid-row: span 1;
       }
 
+      .time-card {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .meta,
+      .time-photos {
+        grid-column: 1;
+      }
+
+      .time-photos {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .time-photo {
+        min-height: 124px;
+      }
+
       .section-head {
         display: grid;
       }
@@ -971,7 +1084,7 @@
       <div class="nav-title">香港三天两夜旅行罗盘</div>
       <div class="nav-actions">
         <button class="chip" data-jump="overview">路线</button>
-        <button class="chip" data-jump="gallery">照片</button>
+        <button class="chip" data-jump="gallery">精选</button>
         <button class="chip" onclick="window.print()">导出 PDF</button>
       </div>
     </nav>
@@ -1023,8 +1136,8 @@
 
     <section class="gallery" id="gallery">
       <div class="section-head">
-        <h2>景点照片</h2>
-        <p>照片跟随当前 Day 切换。它们不是装饰，而是你出门前判断“这站值不值得停”的视觉索引。</p>
+        <h2>今日精选</h2>
+        <p>完整照片已经收进每个行程点里。这里保留少量代表图，方便快速判断当天的视觉重点。</p>
       </div>
       <div class="photo-grid" id="photoGrid"></div>
     </section>
@@ -1235,63 +1348,227 @@
                             "抵达香港机场",
                             "办理入境、取行李。国泰在 HKG 使用 T1，到达后看航显和指示牌。",
                             "机场",
-                            "行李"
+                            "行李",
+                            [
+                                  [
+                                        "assets/avenue-stars.jpg",
+                                        "星光大道 · 维港栏杆位"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-01-太平山顶.webp",
+                                        "小红书推荐图 · 山顶夜景预览"
+                                  ]
+                            ]
                       ],
                       [
                             "12:20-13:10",
                             "到酒店寄存行李",
                             "优先机场快线到九龙站再打车去旺角酒店，带行李更稳。",
                             "机场快线",
-                            "酒店"
+                            "酒店",
+                            [
+                                  [
+                                        "assets/mong-kok.jpg",
+                                        "旺角 · 回酒店后的夜宵半径"
+                                  ]
+                            ]
                       ],
                       [
                             "13:10-14:00",
                             "第一顿午餐",
                             "酒店附近茶餐厅解决，点菠萝油、干炒牛河、奶茶或烧味饭。",
                             "油麻地",
-                            "午餐"
+                            "午餐",
+                            [
+                                  [
+                                        "assets/xhs-hi/xhs-hi-35-6904bd27000000000401306a.webp",
+                                        "小红书实拍 · 落地第一顿茶餐厅"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-36-65bb883000000000020200ad.webp",
+                                        "小红书实拍 · 港式茶餐厅"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-16-67b08bdb000000002901c43d.webp",
+                                        "小红书实拍 · 尖沙咀晚餐"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-37-68b6c043000000001d01fe88.webp",
+                                        "小红书实拍 · 港式点心拼桌"
+                                  ]
+                            ]
                       ],
                       [
                             "14:00-16:10",
                             "K11 MUSEA + 海港城",
                             "油麻地站到尖沙咀站，逛 K11、海港城，热的时候用商场作空调缓冲。",
                             "荃湾线",
-                            "拍照"
+                            "拍照",
+                            [
+                                  [
+                                        "assets/xhs-hi/xhs-hi-38-67aec0b5000000002903fcb6.webp",
+                                        "小红书实拍 · K11 MUSEA 外景"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-39-652a67200000000020002357.webp",
+                                        "小红书实拍 · 尖沙咀街景"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-40-66438815000000001e01941c.webp",
+                                        "小红书实拍 · K11 / 海港城片区"
+                                  ],
+                                  [
+                                        "assets/k11-musea.jpg",
+                                        "K11 MUSEA · 室内装置"
+                                  ]
+                            ]
                       ],
                       [
                             "16:10-18:00",
                             "星光大道 + 维港海滨",
                             "拍李小龙铜像、明星手印、文化中心海旁和钟楼方向。",
                             "步行",
-                            "海景"
+                            "海景",
+                            [
+                                  [
+                                        "assets/avenue-stars.jpg",
+                                        "星光大道 · 维港栏杆位"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-41-68e140520000000007035e4f.webp",
+                                        "小红书实拍 · 维港夜景栏杆位"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-42-67b7de70000000000d0148c2.webp",
+                                        "小红书实拍 · 星光大道夜色"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-06-66cc7ab9000000001d01b394.webp",
+                                        "小红书实拍 · 维港天际线"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-05-星光大道.webp",
+                                        "小红书推荐图 · 星光大道机位"
+                                  ]
+                            ]
                       ],
                       [
                             "18:00-19:20",
                             "尖沙咀晚餐",
                             "华嫂冰室或商场内快餐厅，不要把晚餐拖到 19:40 后。",
                             "尖沙咀",
-                            "晚餐"
+                            "晚餐",
+                            [
+                                  [
+                                        "assets/xhs-hi/xhs-hi-35-6904bd27000000000401306a.webp",
+                                        "小红书实拍 · 落地第一顿茶餐厅"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-36-65bb883000000000020200ad.webp",
+                                        "小红书实拍 · 港式茶餐厅"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-16-67b08bdb000000002901c43d.webp",
+                                        "小红书实拍 · 尖沙咀晚餐"
+                                  ]
+                            ]
                       ],
                       [
                             "19:20-20:10",
                             "幻彩咏香江",
                             "尖沙咀文化中心海旁或星光大道占位，官方 20:00 开始。",
                             "最佳机位",
-                            "夜景"
+                            "夜景",
+                            [
+                                  [
+                                        "assets/xhs-hi/xhs-hi-28-66b6cd560000000025031183.webp",
+                                        "小红书实拍 · 灯光秀候场"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-29-686f9578000000001203e382.webp",
+                                        "小红书实拍 · 幻彩咏香江"
+                                  ],
+                                  [
+                                        "assets/victoria-harbour.jpg",
+                                        "维多利亚港 · 20:00 灯光秀"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-31-62e3ba560000000011012111.webp",
+                                        "小红书实拍 · 灯光秀视角"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-32-656ddc850000000006028e7d.webp",
+                                        "小红书实拍 · 夜景机位"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-33-62c97c60000000001002ac74.webp",
+                                        "小红书实拍 · 维港灯光"
+                                  ]
+                            ]
                       ],
                       [
                             "20:10-21:20",
                             "天星小轮夜航",
                             "尖沙咀码头到中环码头，坐上层靠窗看两岸灯光。",
                             "渡轮",
-                            "体验"
+                            "体验",
+                            [
+                                  [
+                                        "assets/star-ferry.jpg",
+                                        "天星小轮 · 夜航过海"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-43-641cf4af00000000130011ec.webp",
+                                        "小红书实拍 · 天星小轮码头"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-44-66cb177f000000001f01f2fd.webp",
+                                        "小红书实拍 · 渡轮视角"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-45-6648444000000000150109ab.webp",
+                                        "小红书实拍 · 天星小轮船舱"
+                                  ]
+                            ]
                       ],
                       [
                             "21:20-22:00",
                             "回酒店 / 庙街夜宵",
                             "从中环或尖沙咀回油麻地/旺角，体力好可顺路吃宵夜。",
                             "地铁",
-                            "收尾"
+                            "收尾",
+                            [
+                                  [
+                                        "assets/mong-kok.jpg",
+                                        "旺角 · 回酒店后的夜宵半径"
+                                  ]
+                            ]
+                      ]
+                ],
+                "featuredPhotos": [
+                      [
+                            "assets/avenue-stars.jpg",
+                            "星光大道 · 维港栏杆位"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-35-6904bd27000000000401306a.webp",
+                            "小红书实拍 · 落地第一顿茶餐厅"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-36-65bb883000000000020200ad.webp",
+                            "小红书实拍 · 港式茶餐厅"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-38-67aec0b5000000002903fcb6.webp",
+                            "小红书实拍 · K11 MUSEA 外景"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-39-652a67200000000020002357.webp",
+                            "小红书实拍 · 尖沙咀街景"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-40-66438815000000001e01941c.webp",
+                            "小红书实拍 · K11 / 海港城片区"
                       ]
                 ]
           },
@@ -1381,63 +1658,195 @@
                             "酒店附近早餐",
                             "茶餐厅即可，控制 30 分钟内，给港岛路线留体力。",
                             "旺角",
-                            "早餐"
+                            "早餐",
+                            [
+                                  [
+                                        "assets/xhs-hi/xhs-hi-07-6641aee9000000001e03af81.webp",
+                                        "小红书实拍 · 中环街景"
+                                  ],
+                                  [
+                                        "assets/kennedy-town.jpg",
+                                        "坚尼地城 · 海边日落"
+                                  ]
+                            ]
                       ],
                       [
                             "09:00-09:35",
                             "酒店 → 中环",
                             "油麻地站坐荃湾线到中环，出站步行到半山扶梯起点。",
                             "荃湾线",
-                            "转场"
+                            "转场",
+                            [
+                                  [
+                                        "assets/xhs-hi/xhs-hi-07-6641aee9000000001e03af81.webp",
+                                        "小红书实拍 · 中环街景"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-09-6730ca81000000001a037ae7.webp",
+                                        "小红书实拍 · 中环坡道"
+                                  ]
+                            ]
                       ],
                       [
                             "09:35-11:05",
                             "半山扶梯 + 嘉咸街",
                             "扶梯、坡道、壁画和街市都适合拍复古港风。",
                             "中环",
-                            "拍照"
+                            "拍照",
+                            [
+                                  [
+                                        "assets/mid-levels-escalator.jpg",
+                                        "半山扶梯 · 中环电影感"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-08-67ced769000000002900ce8e.webp",
+                                        "小红书实拍 · 半山扶梯"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-09-6730ca81000000001a037ae7.webp",
+                                        "小红书实拍 · 中环坡道"
+                                  ]
+                            ]
                       ],
                       [
                             "11:05-12:30",
                             "大馆 Tai Kwun",
                             "旧警署、监狱建筑和庭院，室内展厅也适合避暑。",
                             "荷李活道",
-                            "文化"
+                            "文化",
+                            [
+                                  [
+                                        "assets/tai-kwun.jpg",
+                                        "大馆 · 历史建筑"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-23-68693cd90000000023006112.webp",
+                                        "小红书实拍 · 大馆白色立面"
+                                  ]
+                            ]
                       ],
                       [
                             "12:30-13:40",
                             "中环午餐",
                             "中环街市、兰芳园、九记牛腩或附近茶餐厅，排队长就换。",
                             "中环",
-                            "午餐"
+                            "午餐",
+                            [
+                                  [
+                                        "assets/xhs-hi/xhs-hi-07-6641aee9000000001e03af81.webp",
+                                        "小红书实拍 · 中环街景"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-09-6730ca81000000001a037ae7.webp",
+                                        "小红书实拍 · 中环坡道"
+                                  ]
+                            ]
                       ],
                       [
                             "13:40-14:20",
                             "前往山顶",
                             "优先山顶缆车；如果排队过长，改 15 路巴士上山。",
                             "缆车",
-                            "上山"
+                            "上山",
+                            [
+                                  [
+                                        "assets/peak-tram.jpg",
+                                        "山顶缆车 · 经典上山"
+                                  ],
+                                  [
+                                        "assets/victoria-harbour.jpg",
+                                        "山顶视角 · 俯瞰维港"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-46-67e9531e000000001c035fac.webp",
+                                        "小红书实拍 · 太平山顶观景"
+                                  ]
+                            ]
                       ],
                       [
                             "14:20-16:25",
                             "太平山顶",
                             "凌霄阁、山顶广场、卢吉道观景位，视体力选择是否走卢吉道。",
                             "山顶",
-                            "观景"
+                            "观景",
+                            [
+                                  [
+                                        "assets/victoria-harbour.jpg",
+                                        "山顶视角 · 俯瞰维港"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-46-67e9531e000000001c035fac.webp",
+                                        "小红书实拍 · 太平山顶观景"
+                                  ]
+                            ]
                       ],
                       [
                             "16:25-18:40",
                             "坚尼地城日落",
                             "下山后港岛线到坚尼地城，海边路牌和足球场旁机位适合傍晚。",
                             "港岛线",
-                            "日落"
+                            "日落",
+                            [
+                                  [
+                                        "assets/kennedy-town.jpg",
+                                        "坚尼地城 · 海边日落"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-20-677a860d000000000800eb7e.webp",
+                                        "小红书实拍 · 坚尼地城海边"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-21-65cbbb500000000007027229.webp",
+                                        "小红书实拍 · 坚尼地城路牌"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-22-69764753000000000a02807a.webp",
+                                        "小红书实拍 · 海边日落机位"
+                                  ]
+                            ]
                       ],
                       [
                             "18:40-21:50",
                             "铜锣湾晚餐购物后回酒店",
                             "时代广场、SOGO、Donki；太累就打车回旺角。",
                             "港岛线",
-                            "购物"
+                            "购物",
+                            [
+                                  [
+                                        "assets/xhs-hi/xhs-hi-24-65a5f8930000000013036d56.webp",
+                                        "小红书实拍 · 铜锣湾购物区"
+                                  ],
+                                  [
+                                        "assets/kennedy-town.jpg",
+                                        "坚尼地城 · 海边日落"
+                                  ]
+                            ]
+                      ]
+                ],
+                "featuredPhotos": [
+                      [
+                            "assets/peak-tram.jpg",
+                            "山顶缆车 · 经典上山"
+                      ],
+                      [
+                            "assets/mid-levels-escalator.jpg",
+                            "半山扶梯 · 中环电影感"
+                      ],
+                      [
+                            "assets/tai-kwun.jpg",
+                            "大馆 · 历史建筑"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-23-68693cd90000000023006112.webp",
+                            "小红书实拍 · 大馆白色立面"
+                      ],
+                      [
+                            "assets/kennedy-town.jpg",
+                            "坚尼地城 · 海边日落"
+                      ],
+                      [
+                            "assets/victoria-harbour.jpg",
+                            "山顶视角 · 俯瞰维港"
                       ]
                 ]
           },
@@ -1523,49 +1932,165 @@
                             "早餐 + 退房",
                             "行李寄存在前台，随身包放证件、机票材料、充电宝。",
                             "酒店",
-                            "退房"
+                            "退房",
+                            [
+                                  [
+                                        "assets/mong-kok.jpg",
+                                        "旺角 · 手信补货"
+                                  ]
+                            ]
                       ],
                       [
                             "09:30-10:00",
                             "酒店 → 西九龙文化区",
                             "推荐打车 10-15 分钟到香港故宫 / 西九，地铁换乘不如打车省心。",
                             "打车",
-                            "转场"
+                            "转场",
+                            [
+                                  [
+                                        "assets/victoria-harbour.jpg",
+                                        "西九龙海滨 · 港岛天际线"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-25-684015060000000021009312.webp",
+                                        "小红书实拍 · 西九龙文化区"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-27-6713bf330000000024019c75.webp",
+                                        "小红书实拍 · 西九龙草坪"
+                                  ]
+                            ]
                       ],
                       [
                             "10:00-12:15",
                             "香港故宫文化博物馆",
                             "周一通常 10:00-18:00 开放；M+ 周一闭馆，只看外观或海滨。",
                             "西九龙",
-                            "文化"
+                            "文化",
+                            [
+                                  [
+                                        "assets/palace-museum.jpg",
+                                        "香港故宫 · 周一开放主线"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-25-684015060000000021009312.webp",
+                                        "小红书实拍 · 西九龙文化区"
+                                  ]
+                            ]
                       ],
                       [
                             "12:15-13:05",
                             "西九龙午餐",
                             "圆方、西九龙或尖沙咀方向吃饭，不排长队。",
                             "午餐",
-                            "快节奏"
+                            "快节奏",
+                            [
+                                  [
+                                        "assets/victoria-harbour.jpg",
+                                        "西九龙海滨 · 港岛天际线"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-25-684015060000000021009312.webp",
+                                        "小红书实拍 · 西九龙文化区"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-26-67f22480000000001202d834.webp",
+                                        "小红书实拍 · M+ 外观与海滨"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-27-6713bf330000000024019c75.webp",
+                                        "小红书实拍 · 西九龙草坪"
+                                  ]
+                            ]
                       ],
                       [
                             "13:05-13:45",
                             "回酒店取行李 + 最后补货",
                             "旺角/油麻地附近买曲奇、药妆、便利店零食，过 13:45 直接走。",
                             "旺角",
-                            "手信"
+                            "手信",
+                            [
+                                  [
+                                        "assets/mong-kok.jpg",
+                                        "旺角 · 手信补货"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-47-67794e56000000000900d277.webp",
+                                        "小红书实拍 · 机场返程补货"
+                                  ]
+                            ]
                       ],
                       [
                             "13:45-14:35",
                             "前往香港机场",
                             "酒店打车到九龙站，机场快线约 22 分钟到 HKG。",
                             "机场快线",
-                            "推荐"
+                            "推荐",
+                            [
+                                  [
+                                        "assets/xhs-hi/xhs-hi-47-67794e56000000000900d277.webp",
+                                        "小红书实拍 · 机场返程补货"
+                                  ],
+                                  [
+                                        "assets/star-ferry.jpg",
+                                        "返程节奏 · 预留缓冲"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-48-6791b3bb000000001800c71c.webp",
+                                        "小红书实拍 · 返程备选商场"
+                                  ]
+                            ]
                       ],
                       [
                             "14:35-17:00",
                             "HKG T1 候机",
                             "国泰 T1 A/B/C 区值机，柜台通常起飞前 60 分钟关闭。",
                             "HKG T1",
-                            "登机"
+                            "登机",
+                            [
+                                  [
+                                        "assets/xhs-hi/xhs-hi-47-67794e56000000000900d277.webp",
+                                        "小红书实拍 · 机场返程补货"
+                                  ],
+                                  [
+                                        "assets/star-ferry.jpg",
+                                        "返程节奏 · 预留缓冲"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-48-6791b3bb000000001800c71c.webp",
+                                        "小红书实拍 · 返程备选商场"
+                                  ],
+                                  [
+                                        "assets/xhs-hi/xhs-hi-49-67b7e0e6000000000b017412.webp",
+                                        "小红书实拍 · 室内备选景点"
+                                  ]
+                            ]
+                      ]
+                ],
+                "featuredPhotos": [
+                      [
+                            "assets/palace-museum.jpg",
+                            "香港故宫 · 周一开放主线"
+                      ],
+                      [
+                            "assets/mplus.jpg",
+                            "M+ · 周一只看外观"
+                      ],
+                      [
+                            "assets/victoria-harbour.jpg",
+                            "西九龙海滨 · 港岛天际线"
+                      ],
+                      [
+                            "assets/mong-kok.jpg",
+                            "旺角 · 手信补货"
+                      ],
+                      [
+                            "assets/xhs-hi/xhs-hi-47-67794e56000000000900d277.webp",
+                            "小红书实拍 · 机场返程补货"
+                      ],
+                      [
+                            "assets/star-ferry.jpg",
+                            "返程节奏 · 预留缓冲"
                       ]
                 ]
           }
@@ -1588,11 +2113,23 @@
     const tweakPickButtons = [...document.querySelectorAll("[data-pick]")];
     const jumpButtons = [...document.querySelectorAll("[data-jump]")];
     let activeDay = 0;
+    let openTimelineIndex = 0;
     let compact = false;
 
-    function setDay(index) {
+    function renderPhotos(photos, className = "mini-photo") {
+      return (photos || []).map(photo => `
+        <figure class="${className}" data-label="${photo[1]}">
+          <img src="${photo[0]}" alt="${photo[1]}" loading="lazy">
+          ${className === "time-photo" ? `<figcaption>${photo[1]}</figcaption>` : ""}
+        </figure>
+      `).join("");
+    }
+
+    function setDay(index, preferredOpenIndex = 0) {
       activeDay = Number(index);
       const trip = trips[activeDay];
+      const firstWithPhotos = trip.timeline.findIndex(item => (item[5] || []).length);
+      openTimelineIndex = preferredOpenIndex >= 0 ? preferredOpenIndex : Math.max(firstWithPhotos, 0);
       root.style.setProperty("--day-accent", trip.accent);
       root.style.setProperty("--day-route", trip.routeGradient);
       root.style.setProperty("--needle", trip.needle);
@@ -1607,25 +2144,45 @@
       statPace.textContent = trip.pace;
       statFocus.textContent = trip.focus;
       routeLine.innerHTML = trip.route.map(station => `<div class="station"><span>${station}</span></div>`).join("");
-      timeline.innerHTML = trip.timeline.map((item, i) => `
-        <article class="time-card" style="--i:${i}">
-          <div class="time">${item[0]}</div>
-          <div class="activity">
-            <h3>${item[1]}</h3>
-            <p>${item[2]}</p>
-          </div>
-          <div class="meta"><span>${item[3]}</span><span>${item[4]}</span></div>
-        </article>
-      `).join("");
-      photoGrid.innerHTML = trip.photos.map(photo => `
-        <figure class="mini-photo" data-label="${photo[1]}">
-          <img src="${photo[0]}" alt="${photo[1]}">
-        </figure>
-      `).join("");
+      renderTimeline();
+      const featured = trip.featuredPhotos || trip.photos.slice(0, 6);
+      photoGrid.innerHTML = renderPhotos(featured);
       dayButtons.forEach(button => {
         button.setAttribute("aria-pressed", String(Number(button.dataset.day) === activeDay));
       });
       tweakPickButtons.forEach(button => button.classList.toggle("active", Number(button.dataset.pick) === activeDay));
+    }
+
+    function renderTimeline() {
+      const trip = trips[activeDay];
+      timeline.innerHTML = trip.timeline.map((item, i) => `
+        <article class="time-card ${i === openTimelineIndex ? "open" : ""}" style="--i:${i}" data-time-index="${i}" tabindex="0" role="button" aria-expanded="${i === openTimelineIndex}">
+          <div class="time">${item[0]}</div>
+          <div class="activity">
+            <h3>${item[1]}</h3>
+            <p>${item[2]}</p>
+            ${(item[5] || []).length ? `<span class="activity-toggle">${i === openTimelineIndex ? "收起照片" : `查看 ${item[5].length} 张相关照片`}</span>` : `<span class="activity-toggle">暂无补图</span>`}
+          </div>
+          <div class="meta"><span>${item[3]}</span><span>${item[4]}</span></div>
+          ${(item[5] || []).length ? `<div class="time-photos">${renderPhotos(item[5], "time-photo")}</div>` : ""}
+        </article>
+      `).join("");
+
+      [...timeline.querySelectorAll(".time-card")].forEach(card => {
+        card.addEventListener("click", () => toggleTimelineCard(Number(card.dataset.timeIndex)));
+        card.addEventListener("keydown", event => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          toggleTimelineCard(Number(card.dataset.timeIndex));
+        });
+      });
+    }
+
+    function toggleTimelineCard(index) {
+      const photos = trips[activeDay].timeline[index][5] || [];
+      if (!photos.length) return;
+      openTimelineIndex = openTimelineIndex === index ? -1 : index;
+      renderTimeline();
     }
 
     dayButtons.forEach(button => button.addEventListener("click", () => setDay(button.dataset.day)));
